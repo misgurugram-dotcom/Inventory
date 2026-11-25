@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whizz EV - Vehicle Inventory Management</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-surface: #1e293b;
+      --bg-sidebar: #020617;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --primary-color: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-primary); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Top Header Bar */
+    .top-bar { height: 48px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; z-index: 90; flex-wrap: wrap; gap: 6px; }
+    .brand-area { display: flex; align-items: center; gap: 8px; }
+    .brand-icon { background: var(--primary-color); width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; }
+    .brand-title { font-weight: 700; font-size: 0.98rem; line-height: 1.1; }
+    .brand-sub { font-size: 0.66rem; color: var(--text-muted); }
+
+    .header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .user-tag { font-size: 0.72rem; padding: 3px 8px; border-radius: 5px; background: #334155; color: #10b981; font-weight: 700; }
+    .action-btn { background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.74rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; text-decoration: none; }
+    .action-btn:hover { background: #059669; }
+    .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .action-btn.excel { background: #16a34a; }
+    .action-btn.excel:hover { background: #15803d; }
+    .action-btn.secondary { background: #3b82f6; }
+    .action-btn.secondary:hover { background: #2563eb; }
+    .action-btn.danger { background: #ef4444; }
+    .action-btn.danger:hover { background: #dc2626; }
+
+    /* Main Container */
+    .content-container { padding: 10px 16px; flex: 1; max-width: 1600px; width: 100%; margin: 0 auto; }
+
+    /* Top Strip: Category Buttons + KPI Cards */
+    .top-summary-row { display: flex; align-items: stretch; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .category-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .cat-btn { background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; height: 100%; }
+    .cat-btn:hover { border-color: var(--primary-color); color: var(--text-main); }
+    .cat-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
+    /* KPI Summary Cards */
+    .kpi-grid { display: flex; gap: 8px; flex: 1; min-width: 320px; }
+    .kpi-card { background: var(--bg-surface); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .kpi-title { font-size: 0.64rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .kpi-value { font-size: 1.05rem; font-weight: 700; color: var(--text-main); }
+    .kpi-value.green { color: #10b981; }
+    .kpi-value.blue { color: #3b82f6; }
+
+    /* Filter Toolbar */
+    .filter-card { background: var(--bg-surface); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .filter-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .filter-group { display: flex; align-items: center; gap: 5px; font-size: 0.74rem; font-weight: 600; color: var(--text-muted); }
+    .filter-input, .filter-select { padding: 4px 8px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main); font-size: 0.74rem; outline: none; }
+    .filter-input:focus, .filter-select:focus { border-color: var(--primary-color); }
+    .record-badge { background: #334155; color: #cbd5e1; font-size: 0.7rem; font-weight: 700; padding: 4px 9px; border-radius: 5px; }
+
+    /* Data Table */
+    .table-card { background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; }
+    .table-wrapper { overflow-x: auto; max-height: calc(100vh - 170px); }
+    table.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.76rem; }
+    table.data-table th { background: #020617; padding: 8px 10px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+    table.data-table td { padding: 7px 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    table.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    /* Status Badges & Action Buttons */
+    .badge { padding: 2px 7px; border-radius: 4px; font-size: 0.67rem; font-weight: 700; display: inline-block; }
+    .badge-active { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+    .badge-rfd { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid #3b82f6; }
+    .badge-maint { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+
+    .img-btn { background: #3b82f6; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; }
+    .edit-btn { background: #f59e0b; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; margin-right: 4px; }
+    .delete-btn { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; }
+
+    /* Role based visibility */
+    body:not(.role-admin) .admin-only { display: none !important; }
+    .login-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .login-overlay.active { display: flex; }
+    .login-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .login-card h2 { font-size: 1.1rem; margin-bottom: 4px; }
+    .login-card p { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px; }
+    .login-card input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main); font-size: 0.9rem; outline: none; margin-bottom: 10px; }
+    .login-card input:focus { border-color: var(--primary-color); }
+    .login-card .action-btn { width: 100%; justify-content: center; padding: 10px; font-size: 0.85rem; }
+    .login-sep { text-align: center; color: var(--text-muted); font-size: 0.72rem; margin: 14px 0; }
+    #login-err { color: #ef4444; font-size: 0.75rem; min-height: 16px; margin-bottom: 6px; }
+    .rem-line { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: var(--bg-surface); width: 95%; max-width: 680px; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); max-height: 92vh; overflow-y: auto; border: 1px solid var(--border-color); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group select { padding: 8px 10px; border-radius: 5px; border: 1px solid var(--border-color); font-size: 0.82rem; background: var(--bg-primary); color: var(--text-main); outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
+    .scan-status { font-size: 0.72rem; color: #10b981; font-weight: 600; margin-top: 2px; }
+  </style>
+</head>
+<body class="role-user">
+
+  <!-- LOGIN / ROLE SELECT -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <h2><i class="fa-solid fa-motorcycle" style="color:#10b981;"></i> Whizz EV — Vehicle Inventory</h2>
+      <p>Apna role chuniye</p>
+      <input type="password" id="admin-pass" placeholder="Admin Password" autocomplete="off" onkeydown="if(event.key==='Enter') loginAsAdmin()">
+      <div id="login-err"></div>
+      <button type="button" class="action-btn" onclick="loginAsAdmin()"><i class="fa-solid fa-user-shield"></i> Login as Admin</button>
+      <div class="login-sep">— ya —</div>
+      <button type="button" class="action-btn secondary" onclick="loginAsUser()"><i class="fa-solid fa-user"></i> Continue as User (RC / Insurance Download)</button>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="brand-area">
+      <div class="brand-icon"><i class="fa-solid fa-motorcycle"></i></div>
+      <div>
+        <div class="brand-title">Whizz EV — Vehicle Inventory</div>
+        <div class="brand-sub">Standalone Fleet, Insurance & Fitness Expiry Tracker</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <span class="user-tag" id="role-badge"></span>
+      <span class="user-tag admin-only" id="alert-badge" style="display:none;"></span>
+      <span class="user-tag admin-only" id="cloud-sync-badge" style="display:none;">☁ Sync</span>
+      <button type="button" class="action-btn admin-only" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
+      <button type="button" class="action-btn excel admin-only" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+      <button type="button" class="action-btn secondary admin-only" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> Import Excel</button>
+      <button type="button" class="action-btn danger admin-only" onclick="deleteAllVehicles()"><i class="fa-solid fa-trash-can"></i> Delete All</button>
+      <input type="file" id="importFile" style="display:none" accept=".xlsx, .xls, .csv" onchange="importFromExcel(event)">
+      <button type="button" class="action-btn danger" onclick="switchRole()" title="Role badlo / Logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <div class="content-container">
+    <!-- COMPACT TOP SUMMARY ROW -->
+    <div class="top-summary-row">
+      <div class="category-bar">
+        <button type="button" class="cat-btn active" id="btn-cat-all" onclick="setCategoryFilter('ALL')">
+          <i class="fa-solid fa-layer-group"></i> All Vehicles
+        </button>
+        <button type="button" class="cat-btn" id="btn-cat-2w" onclick="setCategoryFilter('2W')">
+          <i class="fa-solid fa-motorcycle"></i> 2- Wheeler
+        </button>
+        <button type="button" class="cat-btn" id="btn-cat-3w" onclick="setCategoryFilter('3W')">
+          <i class="fa-solid fa-truck-pickup"></i> 3- Wheeler
+        </button>
+      </div>
+
+      <div class="kpi-grid" id="kpi-container"></div>
+    </div>
+
+    <!-- FILTER TOOLBAR -->
+    <div class="filter-card">
+      <div class="filter-toolbar">
+        <div class="filter-group">
+          <i class="fa-solid fa-magnifying-glass"></i> Search:
+          <input type="text" id="search-input" class="filter-input" placeholder="Vehicle No, Chassis, Location, Remarks..." oninput="renderTable()">
+        </div>
+
+        <div class="filter-group">
+          Model:
+          <select id="filter-model" class="filter-select" onchange="renderTable()">
+            <option value="">All Models</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          Status:
+          <select id="filter-status" class="filter-select" onchange="renderTable()">
+            <option value="">All Status</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          Insurance:
+          <select id="filter-ins-status" class="filter-select" onchange="renderTable()">
+            <option value="">All Insurance</option>
+            <option value="VALID">Valid (Active)</option>
+            <option value="EXPIRED">Expired</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          Fitness:
+          <select id="filter-fit-status" class="filter-select" onchange="renderTable()">
+            <option value="">All Fitness</option>
+            <option value="VALID">Valid (Active)</option>
+            <option value="EXPIRED">Expired</option>
+          </select>
+        </div>
+
+        <button type="button" class="action-btn secondary" style="padding: 4px 9px; font-size: 0.72rem;" onclick="resetFilters()">Reset Filters</button>
+      </div>
+      <div class="record-badge" id="record-count">Showing 0 of 0 Vehicles</div>
+    </div>
+
+    <!-- INVENTORY TABLE -->
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>VEHICLE NO.</th>
+              <th>CHASSIS NO</th>
+              <th>VEHICLE MODEL</th>
+              <th>LOCATION</th>
+              <th>RC DOC</th>
+              <th>INSURANCE DOC</th>
+              <th>INSURANCE START DATE</th>
+              <th>FITNESS START DATE</th>
+              <th>STATUS</th>
+              <th>REMARKS (1 YEAR EXPIRY)</th>
+              <th class="admin-only">ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body">
+            <tr><td colspan="12" style="text-align:center; padding:20px; color:var(--text-muted);">No Data Available.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT VEHICLE MODAL -->
+  <div class="modal-overlay" id="vehicleModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title"><i class="fa-solid fa-motorcycle"></i> Add Vehicle</h3>
+        <button type="button" style="border:none; background:none; cursor:pointer; color:#fff; font-size:1.1rem;" onclick="closeModal('vehicleModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="vehicleForm" onsubmit="saveVehicle(event)">
+        <input type="hidden" id="edit-id" value="">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Vehicle No *</label>
+            <input type="text" id="f-veh-no" placeholder="e.g. DL01EV1234" required style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label>Chassis No *</label>
+            <input type="text" id="f-chassis" placeholder="Enter Chassis Number" required style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label>Vehicle Model</label>
+            <select id="f-model">
+              <optgroup label="3- Wheeler">
+                <option value="APE E- CITY L5(SUNM)">APE E- CITY L5(SUNM)</option>
+                <option value="BAJAJ Go-Go L5">BAJAJ Go-Go L5</option>
+                <option value="BAJAJ Maxima L5">BAJAJ Maxima L5</option>
+                <option value="EULER Hiload/DV L5">EULER Hiload/DV L5</option>
+                <option value="Mahindra Zor Grand DV+">Mahindra Zor Grand DV+</option>
+                <option value="Piaggio Ape E-Xtra FX">Piaggio Ape E-Xtra FX</option>
+                <option value="PIAGGIO L5">PIAGGIO L5</option>
+                <option value="PIAGGIO SUNM">PIAGGIO SUNM</option>
+                <option value="YATRI E-CART PRO L3">YATRI E-CART PRO L3</option>
+              </optgroup>
+              <optgroup label="2- Wheeler">
+                <option value="Ampere">Ampere</option>
+                <option value="Fujiyama">Fujiyama</option>
+                <option value="Fusion">Fusion</option>
+                <option value="Hero Nyx Sunmobility">Hero Nyx Sunmobility</option>
+                <option value="Hero Nyx Whizz">Hero Nyx Whizz</option>
+                <option value="Shema Sunmobility">Shema Sunmobility</option>
+                <option value="Shema Whizz">Shema Whizz</option>
+                <option value="Sun Vegh">Sun Vegh</option>
+                <option value="VEGH">VEGH</option>
+                <option value="Warivo Sunmobility">Warivo Sunmobility</option>
+                <option value="Warivo Whizz">Warivo Whizz</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="f-location" placeholder="e.g. Mundka, Delhi, Noida...">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="f-status">
+              <option value="Active">Active</option>
+              <option value="RFD">RFD</option>
+              <option value="Under_Maintenance">Under_Maintenance</option>
+              <option value="Theft_Case">Theft_Case</option>
+              <option value="Impound">Impound</option>
+              <option value="Battery_thift">Battery_thift</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>RC Document (Image / PDF)</label>
+            <input type="file" id="f-rc-img" accept="image/*,application/pdf">
+          </div>
+          <div class="form-group">
+            <label>Insurance Document (Image / PDF - Auto Scan Date)</label>
+            <input type="file" id="f-ins-img" accept="image/*,application/pdf" onchange="handleInsuranceFileScan(this)">
+            <span class="scan-status" id="ins-scan-msg"></span>
+          </div>
+          <div class="form-group">
+            <label>Insurance Start Date (From Date)</label>
+            <input type="date" id="f-ins-date" onchange="updateFormExpiryPreview()">
+          </div>
+          <div class="form-group">
+            <label>Auto 1-Year Insurance Expiry Preview</label>
+            <input type="text" id="f-expiry-preview" readonly placeholder="Select Insurance Date..." style="background:#020617; font-weight:700;">
+          </div>
+          <div class="form-group">
+            <label>Fitness Start Date (From Date)</label>
+            <input type="date" id="f-fit-date" onchange="updateFormExpiryPreview()">
+          </div>
+          <div class="form-group">
+            <label>Auto 1-Year Fitness Expiry Preview</label>
+            <input type="text" id="f-fit-expiry-preview" readonly placeholder="Select Fitness Date..." style="background:#020617; font-weight:700;">
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Additional Remarks (Optional)</label>
+            <input type="text" id="f-remarks" placeholder="Any extra notes (1-Year expiry status will show automatically)...">
+          </div>
+        </div>
+        <div style="margin-top: 18px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="action-btn secondary" onclick="closeModal('vehicleModal')">Cancel</button>
+          <button type="submit" class="action-btn" id="btn-save-veh"><i class="fa-solid fa-check"></i> Save Vehicle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DOCUMENT PREVIEW MODAL -->
+  <div class="modal-overlay" id="imgModal">
+    <div class="modal-card" style="text-align: center; max-width: 800px;">
+      <div class="modal-header">
+        <h3 id="img-modal-title">Document Preview</h3>
+        <button type="button" style="border:none; background:none; cursor:pointer; color:#fff; font-size:1.1rem;" onclick="closeModal('imgModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="previewContainer" style="width:100%; display:flex; justify-content:center; align-items:center;"></div>
+      <div style="margin-top: 14px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+        <a id="openDriveNewTabBtn" href="#" target="_blank" rel="noopener" class="action-btn secondary" style="display:none;"><i class="fa-solid fa-up-right-from-square"></i> Open Full Page</a>
+        <button type="button" class="action-btn excel" style="display:inline-flex;" onclick="downloadPreviewDoc()"><i class="fa-solid fa-download"></i> Download Document</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================= LAZY LIBRARIES =================
+    const _scriptPromises = {};
+    function loadScript(src) {
+      if (!_scriptPromises[src]) {
+        _scriptPromises[src] = new Promise((res, rej) => {
+          const el = document.createElement('script');
+          el.src = src; el.onload = res;
+          el.onerror = () => { delete _scriptPromises[src]; rej(new Error('Load failed: ' + src)); };
+          document.head.appendChild(el);
+        });
+      }
+      return _scriptPromises[src];
+    }
+    async function ensureXLSX() {
+      if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    }
+    async function ensurePdf() {
+      if (!window.pdfjsLib) {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    }
+    async function ensureOCR() {
+      if (!window.Tesseract) await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+    }
+    async function fetchT(url, opt, ms) {
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), ms);
+      try { return await fetch(url, { ...opt, signal: c.signal }); } finally { clearTimeout(t); }
+    }
+
+    // ================= DATABASE CONFIG =================
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx07IlOsqdg-mY7LclMStEv8DipY2dt3RiOYOhwqL6xcFnK3Xg0aPVj3pb4XDY8Wz7H/exec";
+
+    // ================= ROLE (Admin / User) =================
+    const ADMIN_PASSWORD_HASH = "3168124d638cdb95e2a558a8223e40eff8aea5643676c5aa95b6025b1ef05382";
+    let currentRole = sessionStorage.getItem('whizz_inv_role') || '';
+    const isAdmin = () => currentRole === 'admin';
+
+    async function sha256Hex(t) {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+      return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+    function applyRole() {
+      document.body.classList.toggle('role-admin', currentRole === 'admin');
+      document.body.classList.toggle('role-user', currentRole !== 'admin');
+      document.getElementById('loginOverlay').classList.toggle('active', !currentRole);
+      const rb = document.getElementById('role-badge');
+      rb.style.display = currentRole ? 'inline-block' : 'none';
+      rb.innerText = currentRole === 'admin' ? '🛡 Admin' : '👤 User';
+      if (!currentRole) { document.getElementById('admin-pass').value = ''; document.getElementById('login-err').innerText = ''; }
+      renderTable();
+    }
+    function loginAsUser() {
+      currentRole = 'user'; sessionStorage.setItem('whizz_inv_role', 'user'); applyRole();
+    }
+    async function loginAsAdmin() {
+      const err = document.getElementById('login-err');
+      try {
+        if (!window.crypto || !crypto.subtle) throw new Error('secure');
+        const ok = (await sha256Hex(document.getElementById('admin-pass').value)) === ADMIN_PASSWORD_HASH;
+        if (!ok) { err.innerText = 'Galat password'; return; }
+        currentRole = 'admin'; sessionStorage.setItem('whizz_inv_role', 'admin'); applyRole(); loadFromCloud();
+      } catch (e) {
+        err.innerText = 'Login nahi ho paya (https link se kholiye)';
+      }
+    }
+    function switchRole() {
+      sessionStorage.removeItem('whizz_inv_role'); currentRole = ''; applyRole();
+    }
+
+    // ================= EXPIRY MAIL ALERT CONFIG =================
+    const ALERT_SCRIPT_URL = SCRIPT_URL;
+    const ALERT_EMAILS = ["info@whizzev.in", "vikash.singh@whizzev.in"];
+    const ALERT_LEAD_DAYS = 10;
+
+    // ================= 3-WHEELER & 2-WHEELER MODELS =================
+    const MODELS_3W = [
+      "APE E- CITY L5(SUNM)",
+      "BAJAJ Go-Go L5",
+      "BAJAJ Maxima L5",
+      "EULER Hiload/DV L5",
+      "Mahindra Zor Grand DV+",
+      "Piaggio Ape E-Xtra FX",
+      "PIAGGIO L5",
+      "PIAGGIO SUNM",
+      "YATRI E-CART PRO L3"
+    ];
+
+    const MODELS_2W = [
+      "Ampere",
+      "Fujiyama",
+      "Fusion",
+      "Hero Nyx Sunmobility",
+      "Hero Nyx Whizz",
+      "Shema Sunmobility",
+      "Shema Whizz",
+      "Sun Vegh",
+      "VEGH",
+      "Warivo Sunmobility",
+      "Warivo Whizz"
+    ];
+
+    const VEHICLE_MODELS = [...MODELS_3W, ...MODELS_2W];
+    const VEHICLE_STATUSES = ["Active", "RFD", "Under_Maintenance", "Theft_Case", "Impound", "Battery_thift"];
+    const STORAGE_KEY = "whizz_standalone_vehicles_v2";
+
+    let activeCategory = 'ALL';
+
+    function getVehicleCategory(modelName) {
+      const m = (modelName || "").trim().toLowerCase();
+      if (!m) return '3W';
+      if (MODELS_2W.some(x => x.toLowerCase() === m)) return '2W';
+      if (MODELS_3W.some(x => x.toLowerCase() === m)) return '3W';
+      if (m.includes('l5') || m.includes('l3') || m.includes('piagg') || m.includes('bajaj') || m.includes('euler') || m.includes('mahindra') || m.includes('yatri') || m.includes('ape')) {
+        return '3W';
+      }
+      return '2W';
+    }
+
+    function setCategoryFilter(cat) {
+      activeCategory = cat;
+      document.getElementById('btn-cat-all').classList.toggle('active', cat === 'ALL');
+      document.getElementById('btn-cat-2w').classList.toggle('active', cat === '2W');
+      document.getElementById('btn-cat-3w').classList.toggle('active', cat === '3W');
+      populateFilterDropdowns();
+      renderTable();
+    }
+
+    let vehiclesData = [];
+    try {
+      vehiclesData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch (e) { vehiclesData = []; }
+
+    let currentPreviewData = { src: "", downloadUrl: "", filename: "document" };
+    let firstLoadDone = false;
+
+    // ================= INITIALIZE =================
+    window.addEventListener('DOMContentLoaded', async () => {
+      applyRole();
+      populateFilterDropdowns();
+      renderTable();
+      await loadFromCloud();
+      checkAndSendExpiryAlerts();
+      setInterval(() => {
+        if (document.hidden || !currentRole) return;
+        if (document.getElementById('vehicleModal').classList.contains('active')) return;
+        loadFromCloud();
+      }, 120000);
+    });
+
+    // ================= DATE PARSER (NUMERIC + MONTH NAME LIKE 12-Aug-2024) =================
+    const MONTHS_MAP = {
+      jan: 0, january: 0,
+      feb: 1, february: 1,
+      mar: 2, march: 2,
+      apr: 3, april: 3,
+      may: 4,
+      jun: 5, june: 5,
+      jul: 6, july: 6,
+      aug: 7, august: 7,
+      sep: 8, sept: 8, september: 8,
+      oct: 9, october: 9,
+      nov: 10, november: 10,
+      dec: 11, december: 11
+    };
+
+    function parseAnyDate(val) {
+      if (!val) return null;
+      const s = String(val).trim();
+      if (/^\d{5}(\.\d+)?$/.test(s)) {
+        const d = new Date(Math.floor(Number(s) - 25569) * 86400 * 1000);
+        return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      }
+      let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+      if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+      m = s.match(/^(\d{1,2})[\s\-\/]+([A-Za-z]+)[\s\-\/]+(\d{4})/);
+      if (m) {
+        const mo = MONTHS_MAP[m[2].toLowerCase()];
+        if (mo !== undefined) return new Date(+m[3], mo, +m[1]);
+      }
+      return null;
+    }
+
+    function formatDateDDMMYYYY(d) {
+      if (!d) return '-';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}-${mm}-${yyyy}`;
+    }
+
+    function formatDateYYYYMMDD(d) {
+      if (!d) return '';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function evaluateExpiry(startDateStr, label) {
+      const start = parseAnyDate(startDateStr);
+      if (!start) return { valid: false, expired: false, dueSoon: false, text: '', expiryStr: '', startStr: '', daysLeft: null };
+
+      const expiryDate = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate() - 1);
+      const expiryStr = formatDateDDMMYYYY(expiryDate);
+      const startStr = formatDateDDMMYYYY(start);
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const daysLeft = Math.round((expiryDate.getTime() - today.getTime()) / 86400000);
+
+      if (daysLeft < 0) {
+        const overdueDays = Math.abs(daysLeft);
+        return {
+          valid: false, expired: true, dueSoon: false, expiryStr, startStr, daysLeft,
+          text: `${label}: EXPIRED (${overdueDays} day${overdueDays > 1 ? 's' : ''} ago | Exp: ${expiryStr})`
+        };
+      }
+      const dueSoon = daysLeft <= ALERT_LEAD_DAYS;
+      return {
+        valid: true, expired: false, dueSoon, expiryStr, startStr, daysLeft,
+        text: `${label}: 1 Yr Valid till ${expiryStr} (${daysLeft} days left)`
+      };
+    }
+    const evaluateInsuranceExpiry = d => evaluateExpiry(d, 'Insurance');
+    const evaluateFitnessExpiry = d => evaluateExpiry(d, 'Fitness');
+
+    function setPreview(inputId, info) {
+      const el = document.getElementById(inputId);
+      el.value = info.text;
+      el.style.color = info.text ? ((info.expired || info.dueSoon) ? '#ef4444' : '#10b981') : '#94a3b8';
+    }
+
+    function updateFormExpiryPreview() {
+      setPreview('f-expiry-preview', evaluateInsuranceExpiry(document.getElementById('f-ins-date').value));
+      setPreview('f-fit-expiry-preview', evaluateFitnessExpiry(document.getElementById('f-fit-date').value));
+    }
+
+    // ================= 10-DAY PRE-EXPIRY MAIL ALERT =================
+    function setAlertBadge(state, text) {
+      const b = document.getElementById('alert-badge');
+      if (!b) return;
+      b.style.display = 'inline-block';
+      b.style.color = state === 'ok' ? '#10b981' : state === 'busy' ? '#38bdf8' : '#f59e0b';
+      b.innerText = '✉ ' + text;
+    }
+
+    function collectAlertItems() {
+      const items = [];
+      vehiclesData.forEach(v => {
+        const wheelerType = getVehicleCategory(v["Vehicle Modal"]);
+        [['Insurance', 'Insurance_Date', 'Alert_Ins'], ['Fitness', 'Fitness_Date', 'Alert_Fit']].forEach(([type, dateField, flagField]) => {
+          const info = evaluateExpiry(v[dateField], type);
+          if (info.daysLeft === null || info.daysLeft > ALERT_LEAD_DAYS) return;
+
+          const stage = info.expired ? 'EXP' : 'WARN10';
+          const marker = `${stage}:${info.expiryStr}`;
+          if (v[flagField] === marker) return;
+
+          items.push({
+            key: `${v["Vehicle No"]}|${type}|${stage}|${info.expiryStr}`,
+            vehicleNo: v["Vehicle No"] || '',
+            chassisNo: v["Chassis No"] || '',
+            model: v["Vehicle Modal"] || '',
+            location: v["Location"] || '',
+            wheelerType,
+            type,
+            startDate: info.startStr,
+            expiryDate: info.expiryStr,
+            daysLeft: info.daysLeft,
+            overdue: info.daysLeft < 0 ? Math.abs(info.daysLeft) : 0,
+            _id: v.id,
+            _flag: flagField,
+            _marker: marker
+          });
+        });
+      });
+      return items;
+    }
+
+    async function checkAndSendExpiryAlerts() {
+      const items = collectAlertItems();
+      if (!items.length) return;
+      if (!ALERT_SCRIPT_URL) return;
+      try {
+        setAlertBadge('busy', 'Sending alert...');
+        const form = new URLSearchParams();
+        form.append('action', 'expiryAlert');
+        form.append('to', ALERT_EMAILS.join(','));
+        form.append('items', JSON.stringify(items.map(({ _id, _flag, _marker, ...rest }) => rest)));
+        const resp = await fetch(ALERT_SCRIPT_URL, { method: 'POST', body: form });
+        const res = await resp.json();
+        if (res.result !== 'success') throw new Error(res.message || 'Mail error');
+        items.forEach(it => {
+          const v = vehiclesData.find(x => String(x.id) === String(it._id));
+          if (v) { v[it._flag] = it._marker; v._dirty = true; }
+        });
+        saveLocal();
+        pushUnsynced().catch(() => {});
+        setAlertBadge('ok', res.sent ? `${res.sent} alert sent` : 'Alerts up to date');
+      } catch (err) {
+        setAlertBadge('warn', 'Mail alert failed');
+      }
+    }
+
+    // ================= IMPROVED AUTO SCAN DATE (NUMERIC + MONTH NAME + OCR FALLBACK) =================
+    function extractStartDateFromText(text) {
+      if (!text) return null;
+      const clean = text.replace(/\s+/g, ' ');
+
+      let m = clean.match(/\bFrom\b[\s:A-Za-z0-9]*?(\d{1,2}[\s\-\/]+(?:[A-Za-z]{3,9}|\d{1,2})[\s\-\/]+\d{4})/i);
+      if (m) {
+        const d = parseAnyDate(m[1]);
+        if (d) return d;
+      }
+
+      m = clean.match(/FROM\s+[\d:]+\s+ON\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i);
+      if (m) {
+        const d = parseAnyDate(m[1]);
+        if (d) return d;
+      }
+
+      const allMatches = [...clean.matchAll(/\b(\d{1,2}[\s\-\/]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*[\s\-\/]+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]20\d{2})\b/gi)];
+      for (const hit of allMatches) {
+        const d = parseAnyDate(hit[1]);
+        if (d) return d;
+      }
+      return null;
+    }
+
+    async function handleInsuranceFileScan(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const msgEl = document.getElementById('ins-scan-msg');
+      msgEl.style.color = '#38bdf8';
+      msgEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reading Date...';
+
+      try {
+        let extractedText = "";
+        if (file.type === "application/pdf") {
+          await ensurePdf();
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const page = await pdf.getPage(1);
+          const content = await page.getTextContent();
+          extractedText = content.items.map(i => i.str).join(" ");
+
+          if (!extractedText.trim()) {
+            await ensureOCR();
+            const viewport = page.getViewport({ scale: 2 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            const ocrRes = await Tesseract.recognize(canvas, 'eng');
+            extractedText = ocrRes.data.text || "";
+          }
+        } else if (file.type.startsWith("image/")) {
+          await ensureOCR();
+          const res = await Tesseract.recognize(file, 'eng');
+          extractedText = res.data.text || "";
+        }
+
+        const foundDate = extractStartDateFromText(extractedText);
+
+        if (foundDate) {
+          document.getElementById('f-ins-date').value = formatDateYYYYMMDD(foundDate);
+          updateFormExpiryPreview();
+          msgEl.style.color = '#10b981';
+          msgEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Detected: ${formatDateDDMMYYYY(foundDate)}`;
+        } else {
+          msgEl.style.color = '#f59e0b';
+          msgEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Date manually select karein.';
+        }
+      } catch (err) {
+        msgEl.style.color = '#f59e0b';
+        msgEl.innerHTML = '<i class="fa-solid fa-circle-info"></i> Date manually select karein.';
+      }
+    }
+
+    // ================= CLOUD SYNC & SAFE LOCAL STORAGE =================
+    function setSyncBadge(state, text) {
+      const b = document.getElementById('cloud-sync-badge');
+      if (!b) return;
+      const colors = { ok: '#10b981', busy: '#38bdf8', err: '#ef4444' };
+      b.style.display = 'inline-block';
+      b.style.color = colors[state] || '#94a3b8';
+      b.innerText = (state === 'ok' ? '☁ ' : state === 'busy' ? '⟳ ' : '⚠ ') + text;
+    }
+
+    const PENDING_DEL_KEY = "whizz_inv_pending_del";
+    const PENDING_DELALL_KEY = "whizz_inv_pending_delall";
+    const hasDoc = s => typeof s === 'string' && (s.startsWith('data:') || s.startsWith('drive:') || s.startsWith('http'));
+    const hasDataUrl = v => String(v["RC_Image"] || '').startsWith('data:') || String(v["Insurance_Image"] || '').startsWith('data:');
+    const stripLocal = ({ _dirty, _synced, ...r }) => r;
+
+    function getDriveId(s) {
+      s = String(s || '');
+      if (s.startsWith('drive:')) return s.slice(6);
+      const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : '';
+    }
+
+    async function apiPost(action, payload) {
+      const form = new URLSearchParams();
+      form.append('action', action);
+      form.append('payload', JSON.stringify(payload || {}));
+      const resp = await fetchT(SCRIPT_URL, { method: 'POST', body: form }, 90000);
+      const j = await resp.json();
+      if (j.result !== 'success') throw new Error(j.message || 'API error');
+      return j;
+    }
+    async function apiGet(params) {
+      const resp = await fetchT(SCRIPT_URL + '?' + new URLSearchParams(params), {}, 30000);
+      const j = await resp.json();
+      if (j.result !== 'success') throw new Error(j.message || 'API error');
+      return j;
+    }
+
+    function getPendingDel() { try { return JSON.parse(localStorage.getItem(PENDING_DEL_KEY) || '[]'); } catch (e) { return []; } }
+    function setPendingDel(a) { try { localStorage.setItem(PENDING_DEL_KEY, JSON.stringify(a)); } catch (e) {} }
+
+    async function flushPending() {
+      if (!SCRIPT_URL || !isAdmin()) return;
+      if (localStorage.getItem(PENDING_DELALL_KEY) === '1') {
+        await apiPost('deleteAll', {});
+        localStorage.removeItem(PENDING_DELALL_KEY);
+      }
+      const ids = getPendingDel();
+      if (ids.length) { await apiPost('delete', { ids }); setPendingDel([]); }
+    }
+
+    function applyCloudRefs(rec, ref) {
+      if (ref) { rec["RC_Image"] = ref.RC_Image; rec["Insurance_Image"] = ref.Insurance_Image; }
+      rec._synced = true; delete rec._dirty;
+    }
+
+    async function pushUnsynced() {
+      if (!SCRIPT_URL || !isAdmin()) return;
+      const pending = vehiclesData.filter(v => !v._synced || v._dirty);
+      if (!pending.length) return;
+      const withImg = pending.filter(hasDataUrl);
+      const plain = pending.filter(v => !hasDataUrl(v));
+      for (let i = 0; i < plain.length; i += 40) {
+        const chunk = plain.slice(i, i + 40);
+        const j = await apiPost('upsertMany', { records: chunk.map(stripLocal) });
+        chunk.forEach(rec => applyCloudRefs(rec, (j.records || []).find(x => String(x.id) === String(rec.id))));
+      }
+      for (const rec of withImg) {
+        const j = await apiPost('upsert', { record: stripLocal(rec) });
+        applyCloudRefs(rec, j.record);
+      }
+      saveLocal();
+    }
+
+    async function syncOne(rec) {
+      if (!SCRIPT_URL) { setSyncBadge('err', 'Offline Mode'); return false; }
+      try {
+        setSyncBadge('busy', 'Uploading...');
+        const j = await apiPost('upsert', { record: stripLocal(rec) });
+        applyCloudRefs(rec, j.record);
+        saveLocal();
+        renderTable();
+        setSyncBadge('ok', 'Synced');
+        return true;
+      } catch (err) {
+        rec._dirty = true; saveLocal();
+        setSyncBadge('err', 'Offline Saved');
+        return false;
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!SCRIPT_URL) { setSyncBadge('err', 'Offline Mode'); firstLoadDone = true; renderTable(); return; }
+      try {
+        setSyncBadge('busy', 'Syncing...');
+        await flushPending();
+        await pushUnsynced();
+        const j = await apiGet({ action: 'list' });
+        const cloud = (j.records || []).map(r => ({ ...r, _synced: true }));
+        const cloudIds = new Set(cloud.map(r => String(r.id)));
+        const keepLocal = vehiclesData.filter(v => !cloudIds.has(String(v.id)) && !v._synced);
+        vehiclesData = cloud.concat(keepLocal);
+        saveLocal();
+        renderTable();
+        setSyncBadge('ok', 'Synced');
+      } catch (err) {
+        setSyncBadge('err', 'Offline Mode');
+      } finally {
+        if (!firstLoadDone) { firstLoadDone = true; renderTable(); }
+      }
+    }
+
+    function saveLocal() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(vehiclesData));
+      } catch (e) {
+        try {
+          const lightData = vehiclesData.map(v => ({
+            ...v,
+            RC_Image: (v.RC_Image && v.RC_Image.length > 200000) ? "" : v.RC_Image,
+            Insurance_Image: (v.Insurance_Image && v.Insurance_Image.length > 200000) ? "" : v.Insurance_Image
+          }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(lightData));
+        } catch (err2) {}
+      }
+    }
+
+    // ================= FAST IMAGE COMPRESSION =================
+    function processUploadedFile(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve('');
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 750;
+              let w = img.width;
+              let h = img.height;
+              if (w > MAX_WIDTH) {
+                h = Math.round((h * MAX_WIDTH) / w);
+                w = MAX_WIDTH;
+              }
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', 0.62));
+            };
+            img.onerror = () => resolve(e.target.result);
+            img.src = e.target.result;
+          };
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(file);
+        } else {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // ================= FILTERS & KPI =================
+    function populateFilterDropdowns() {
+      const mSel = document.getElementById('filter-model');
+      const sSel = document.getElementById('filter-status');
+
+      if (activeCategory === '2W') {
+        mSel.innerHTML = `<option value="">All Models (2-Wheeler)</option>` + MODELS_2W.map(m => `<option value="${m}">${m}</option>`).join('');
+      } else if (activeCategory === '3W') {
+        mSel.innerHTML = `<option value="">All Models (3-Wheeler)</option>` + MODELS_3W.map(m => `<option value="${m}">${m}</option>`).join('');
+      } else {
+        mSel.innerHTML = `<option value="">All Models</option>
+          <optgroup label="3- Wheeler">${MODELS_3W.map(m => `<option value="${m}">${m}</option>`).join('')}</optgroup>
+          <optgroup label="2- Wheeler">${MODELS_2W.map(m => `<option value="${m}">${m}</option>`).join('')}</optgroup>`;
+      }
+
+      sSel.innerHTML = `<option value="">All Status</option>` + VEHICLE_STATUSES.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    function populateModalModels(selectedModel = '') {
+      const modalSel = document.getElementById('f-model');
+      let list3w = MODELS_3W;
+      let list2w = MODELS_2W;
+
+      if (activeCategory === '3W' && !selectedModel) {
+        modalSel.innerHTML = list3w.map(m => `<option value="${m}">${m}</option>`).join('');
+      } else if (activeCategory === '2W' && !selectedModel) {
+        modalSel.innerHTML = list2w.map(m => `<option value="${m}">${m}</option>`).join('');
+      } else {
+        modalSel.innerHTML = `
+          <optgroup label="3- Wheeler">${list3w.map(m => `<option value="${m}">${m}</option>`).join('')}</optgroup>
+          <optgroup label="2- Wheeler">${list2w.map(m => `<option value="${m}">${m}</option>`).join('')}</optgroup>
+        `;
+      }
+
+      if (selectedModel) {
+        if (!VEHICLE_MODELS.includes(selectedModel)) {
+          const opt = document.createElement('option');
+          opt.value = selectedModel;
+          opt.textContent = selectedModel;
+          modalSel.prepend(opt);
+        }
+        modalSel.value = selectedModel;
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-model').value = '';
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-ins-status').value = '';
+      document.getElementById('filter-fit-status').value = '';
+      setCategoryFilter('ALL');
+    }
+
+    function renderKPIs(list) {
+      const total = list.length;
+      const active = list.filter(v => (v["Status"] || "").toLowerCase() === 'active').length;
+      const rfd = list.filter(v => (v["Status"] || "").toLowerCase() === 'rfd').length;
+
+      document.getElementById('kpi-container').innerHTML = `
+        <div class="kpi-card"><span class="kpi-title">Total Fleet</span><span class="kpi-value">${total}</span></div>
+        <div class="kpi-card"><span class="kpi-title">Active Vehicles</span><span class="kpi-value green">${active}</span></div>
+        <div class="kpi-card"><span class="kpi-title">Ready For Deployment (RFD)</span><span class="kpi-value blue">${rfd}</span></div>
+      `;
+    }
+
+    // ================= TABLE RENDERING =================
+    function getStatusBadge(status) {
+      const st = (status || 'Active').toLowerCase();
+      if (st === 'active') return `<span class="badge badge-active">${status}</span>`;
+      if (st === 'rfd') return `<span class="badge badge-rfd">${status}</span>`;
+      if (st.includes('maint')) return `<span class="badge badge-maint">${status}</span>`;
+      return `<span class="badge badge-danger">${status}</span>`;
+    }
+
+    function expiryBadge(info) {
+      if (info.expired) return `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> ${info.text}</span>`;
+      if (info.dueSoon) return `<span class="badge badge-maint"><i class="fa-solid fa-clock"></i> ${info.text}</span>`;
+      if (info.valid) return `<span class="badge badge-active"><i class="fa-solid fa-circle-check"></i> ${info.text}</span>`;
+      return '';
+    }
+
+    function renderTable() {
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+      const fModel = document.getElementById('filter-model').value;
+      const fStatus = document.getElementById('filter-status').value;
+      const fIns = document.getElementById('filter-ins-status').value;
+      const fFit = document.getElementById('filter-fit-status').value;
+
+      const categoryList = vehiclesData.filter(v => {
+        if (activeCategory === 'ALL') return true;
+        return getVehicleCategory(v["Vehicle Modal"]) === activeCategory;
+      });
+
+      const filtered = categoryList.filter(v => {
+        if (fModel && (v["Vehicle Modal"] || "") !== fModel) return false;
+        if (fStatus && (v["Status"] || "") !== fStatus) return false;
+
+        const insInfo = evaluateInsuranceExpiry(v["Insurance_Date"]);
+        if (fIns === 'EXPIRED' && !insInfo.expired) return false;
+        if (fIns === 'VALID' && !insInfo.valid) return false;
+
+        const fitInfo = evaluateFitnessExpiry(v["Fitness_Date"]);
+        if (fFit === 'EXPIRED' && !fitInfo.expired) return false;
+        if (fFit === 'VALID' && !fitInfo.valid) return false;
+
+        if (q) {
+          const hay = `${v["Vehicle No"] || ""} ${v["Chassis No"] || ""} ${v["Vehicle Modal"] || ""} ${v["Location"] || ""} ${v["Remarks"] || ""} ${insInfo.text} ${fitInfo.text}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      renderKPIs(categoryList);
+      document.getElementById('record-count').innerText = `Showing ${filtered.length} of ${categoryList.length} Vehicles`;
+
+      const tbody = document.getElementById('tbl-body');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; color:var(--text-muted);">${firstLoadDone ? 'No Data Available.' : '<i class="fa-solid fa-spinner fa-spin"></i> Data load ho raha hai...'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((v, idx) => {
+        const rcCell = hasDoc(v["RC_Image"])
+          ? `<button type="button" class="img-btn" onclick="showDocument('${v.id}', 'RC_Image', 'RC Document - ${v["Vehicle No"]}')"><i class="fa-solid fa-file-lines"></i> View RC</button>`
+          : `<span style="color:var(--text-muted);">-</span>`;
+
+        const insCell = hasDoc(v["Insurance_Image"])
+          ? `<button type="button" class="img-btn" onclick="showDocument('${v.id}', 'Insurance_Image', 'Insurance - ${v["Vehicle No"]}')"><i class="fa-solid fa-file-shield"></i> View Ins</button>`
+          : `<span style="color:var(--text-muted);">-</span>`;
+
+        const insStartDisplay = v["Insurance_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Insurance_Date"])) : '-';
+        const fitStartDisplay = v["Fitness_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Fitness_Date"])) : '-';
+
+        const badges = [expiryBadge(evaluateInsuranceExpiry(v["Insurance_Date"])), expiryBadge(evaluateFitnessExpiry(v["Fitness_Date"]))].filter(Boolean);
+        let remarksHTML = badges.length ? `<div class="rem-line">${badges.join('')}</div>` : '';
+
+        if (v["Remarks"]) {
+          remarksHTML += (remarksHTML ? '<div style="color:#cbd5e1; margin-top:4px;">' + v["Remarks"] + '</div>' : v["Remarks"]);
+        }
+        if (!remarksHTML) remarksHTML = '-';
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><b>${v["Vehicle No"] || '-'}</b></td>
+            <td>${v["Chassis No"] || '-'}</td>
+            <td>${v["Vehicle Modal"] || '-'}</td>
+            <td>${v["Location"] || '-'}</td>
+            <td>${rcCell}</td>
+            <td>${insCell}</td>
+            <td>${insStartDisplay}</td>
+            <td>${fitStartDisplay}</td>
+            <td>${getStatusBadge(v["Status"] || 'Active')}</td>
+            <td>${remarksHTML}</td>
+            <td class="admin-only">
+              <button type="button" class="edit-btn" onclick="editVehicle('${v.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button type="button" class="delete-btn" onclick="deleteVehicle('${v.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ================= FAST INSTANT SAVE =================
+    function openAddModal(item = null) {
+      if (!isAdmin()) return;
+      document.getElementById('edit-id').value = item ? item.id : '';
+      document.getElementById('modal-title').innerHTML = item ? '<i class="fa-solid fa-pen"></i> Edit Vehicle' : '<i class="fa-solid fa-motorcycle"></i> Add Vehicle';
+      document.getElementById('f-veh-no').value = item ? (item["Vehicle No"] || '') : '';
+      document.getElementById('f-chassis').value = item ? (item["Chassis No"] || '') : '';
+      populateModalModels(item ? (item["Vehicle Modal"] || '') : '');
+      document.getElementById('f-location').value = item ? (item["Location"] || '') : '';
+      document.getElementById('f-status').value = item ? (item["Status"] || 'Active') : 'Active';
+      document.getElementById('f-ins-date').value = item && item["Insurance_Date"] ? formatDateYYYYMMDD(parseAnyDate(item["Insurance_Date"])) : '';
+      document.getElementById('f-fit-date').value = item && item["Fitness_Date"] ? formatDateYYYYMMDD(parseAnyDate(item["Fitness_Date"])) : '';
+      document.getElementById('f-remarks').value = item ? (item["Remarks"] || '') : '';
+      document.getElementById('f-rc-img').value = '';
+      document.getElementById('f-ins-img').value = '';
+      document.getElementById('ins-scan-msg').innerHTML = '';
+      updateFormExpiryPreview();
+      document.getElementById('vehicleModal').classList.add('active');
+    }
+
+    function editVehicle(id) {
+      if (!isAdmin()) return;
+      const item = vehiclesData.find(v => String(v.id) === String(id));
+      if (item) openAddModal(item);
+    }
+
+    async function saveVehicle(e) {
+      e.preventDefault();
+      if (!isAdmin()) return;
+      const btn = document.getElementById('btn-save-veh');
+      const oldBtnHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+      try {
+        const editId = document.getElementById('edit-id').value;
+        const vehNo = document.getElementById('f-veh-no').value.trim().toUpperCase();
+        const chassis = document.getElementById('f-chassis').value.trim().toUpperCase();
+        const model = document.getElementById('f-model').value;
+        const location = document.getElementById('f-location').value.trim();
+        const status = document.getElementById('f-status').value;
+        const insDate = document.getElementById('f-ins-date').value;
+        const fitDate = document.getElementById('f-fit-date').value;
+        const remarks = document.getElementById('f-remarks').value.trim();
+
+        const rcFile = document.getElementById('f-rc-img').files[0];
+        const insFile = document.getElementById('f-ins-img').files[0];
+
+        const [rcBase64, insBase64] = await Promise.all([
+          rcFile ? processUploadedFile(rcFile) : Promise.resolve(null),
+          insFile ? processUploadedFile(insFile) : Promise.resolve(null)
+        ]);
+        let savedRec = null;
+
+        if (editId) {
+          const idx = vehiclesData.findIndex(v => String(v.id) === String(editId));
+          if (idx !== -1) {
+            vehiclesData[idx]["Vehicle No"] = vehNo;
+            vehiclesData[idx]["Chassis No"] = chassis;
+            vehiclesData[idx]["Vehicle Modal"] = model;
+            vehiclesData[idx]["Location"] = location;
+            vehiclesData[idx]["Status"] = status;
+            vehiclesData[idx]["Insurance_Date"] = insDate;
+            vehiclesData[idx]["Fitness_Date"] = fitDate;
+            vehiclesData[idx]["Remarks"] = remarks;
+            if (rcBase64) vehiclesData[idx]["RC_Image"] = rcBase64;
+            if (insBase64) vehiclesData[idx]["Insurance_Image"] = insBase64;
+            vehiclesData[idx]._dirty = true;
+            savedRec = vehiclesData[idx];
+          }
+        } else {
+          const newRow = {
+            id: Date.now(),
+            "Vehicle No": vehNo,
+            "Chassis No": chassis,
+            "Vehicle Modal": model,
+            "Location": location,
+            "RC_Image": rcBase64 || "",
+            "Insurance_Image": insBase64 || "",
+            "Insurance_Date": insDate,
+            "Fitness_Date": fitDate,
+            "Status": status,
+            "Remarks": remarks
+          };
+          vehiclesData.unshift(newRow);
+          savedRec = newRow;
+        }
+
+        saveLocal();
+        renderTable();
+        closeModal('vehicleModal');
+
+        if (savedRec) {
+          syncOne(savedRec).then(() => checkAndSendExpiryAlerts());
+        }
+      } catch (err) {
+        alert("Save error: " + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldBtnHTML;
+      }
+    }
+
+    async function deleteVehicle(id) {
+      if (!isAdmin()) return;
+      if (!confirm("Delete this vehicle entry?")) return;
+      vehiclesData = vehiclesData.filter(v => String(v.id) !== String(id));
+      saveLocal();
+      renderTable();
+      const pend = getPendingDel(); pend.push(String(id)); setPendingDel(pend);
+      try { setSyncBadge('busy', 'Saving...'); await flushPending(); setSyncBadge('ok', 'Synced'); }
+      catch (e) { setSyncBadge('err', 'Offline Saved'); }
+    }
+
+    async function deleteAllVehicles() {
+      if (!isAdmin()) return;
+      if (!confirm("⚠️ Saara Vehicle Inventory data delete ho jayega (Google Sheet se bhi). Confirm?")) return;
+      vehiclesData = [];
+      saveLocal();
+      renderTable();
+      try { localStorage.setItem(PENDING_DELALL_KEY, '1'); } catch (e) {}
+      setPendingDel([]);
+      try { setSyncBadge('busy', 'Saving...'); await flushPending(); setSyncBadge('ok', 'Synced'); }
+      catch (e) { setSyncBadge('err', 'Offline Saved'); }
+    }
+
+    // ================= CATEGORY-SPECIFIC EXCEL IMPORT / EXPORT =================
+    function matchKnownModel(rawModel, targetCat = null) {
+      const cleaned = (rawModel || "").toString().trim();
+      if (!cleaned) return null;
+      const lower = cleaned.toLowerCase();
+      const pool = targetCat === '2W' ? MODELS_2W : targetCat === '3W' ? MODELS_3W : VEHICLE_MODELS;
+      const exact = pool.find(m => m.toLowerCase() === lower);
+      if (exact) return exact;
+      if (!targetCat) {
+        const anyExact = VEHICLE_MODELS.find(m => m.toLowerCase() === lower);
+        if (anyExact) return anyExact;
+      }
+      return null;
+    }
+
+    async function exportToExcel() {
+      if (!isAdmin()) return;
+      try { await ensureXLSX(); } catch (e) { return alert('Excel library load nahi hui.'); }
+
+      const targetList = vehiclesData.filter(v => {
+        if (activeCategory === 'ALL') return true;
+        return getVehicleCategory(v["Vehicle Modal"]) === activeCategory;
+      });
+
+      if (!targetList.length) {
+        return alert(`Export ke liye ${activeCategory === 'ALL' ? 'koi' : activeCategory + '-Wheeler'} data nahi hai!`);
+      }
+
+      const cleanRows = targetList.map(v => {
+        const parts = [evaluateInsuranceExpiry(v["Insurance_Date"]).text, evaluateFitnessExpiry(v["Fitness_Date"]).text, v["Remarks"] || ""].filter(Boolean);
+        return {
+          "Vehicle No": v["Vehicle No"] || "",
+          "Chassis No": v["Chassis No"] || "",
+          "Vehicle Modal": v["Vehicle Modal"] || "",
+          "Location": v["Location"] || "",
+          "Insurance Start Date": v["Insurance_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Insurance_Date"])) : "",
+          "Fitness Start Date": v["Fitness_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Fitness_Date"])) : "",
+          "Status": v["Status"] || "",
+          "Remarks": parts.join(" | ")
+        };
+      });
+
+      const suffix = activeCategory === '2W' ? '_2W' : activeCategory === '3W' ? '_3W' : '_All';
+      const ws = XLSX.utils.json_to_sheet(cleanRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Vehicle_Inventory");
+      XLSX.writeFile(wb, `Whizz_EV_Vehicle_Inventory${suffix}.xlsx`);
+    }
+
+    function importFromExcel(e) {
+      if (!isAdmin()) return;
+      const file = e.target.files[0];
+      if (!file) return;
+      const importCategory = activeCategory;
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try { await ensureXLSX(); } catch (err) { return alert('Excel library load nahi hui.'); }
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+        if (!json.length) {
+          e.target.value = '';
+          return alert("Excel file khaali hai!");
+        }
+
+        let skippedCount = 0;
+        const imported = [];
+
+        json.forEach(r => {
+          const rawModel = (r["Vehicle Modal"] || r["VEHICLE MODEL"] || r["Model"] || "").toString().trim();
+          const detectedCat = rawModel ? getVehicleCategory(rawModel) : (importCategory === 'ALL' ? '3W' : importCategory);
+
+          if (importCategory !== 'ALL' && detectedCat !== importCategory) {
+            skippedCount++;
+            return;
+          }
+
+          let finalModel = matchKnownModel(rawModel, importCategory === 'ALL' ? null : importCategory);
+          if (!finalModel) {
+            if (importCategory === '2W') finalModel = MODELS_2W[0];
+            else if (importCategory === '3W') finalModel = MODELS_3W[0];
+            else finalModel = rawModel || VEHICLE_MODELS[0];
+          }
+
+          const rawInsDate = r["Insurance Start Date"] || r["Insurance Date"] || r["INSURANCE DATE"] || "";
+          const parsedD = parseAnyDate(rawInsDate);
+          const rawFitDate = r["Fitness Start Date"] || r["Fitness Date"] || r["FITNESS DATE"] || "";
+          const parsedF = parseAnyDate(rawFitDate);
+
+          imported.push({
+            id: Date.now() + Math.random(),
+            "Vehicle No": (r["Vehicle No"] || r["Vehicle No."] || "").toString().toUpperCase(),
+            "Chassis No": (r["Chassis No"] || r["CHASSIS NO"] || "").toString().toUpperCase(),
+            "Vehicle Modal": finalModel,
+            "Location": r["Location"] || r["LOCATION"] || "",
+            "RC_Image": "",
+            "Insurance_Image": "",
+            "Insurance_Date": parsedD ? formatDateYYYYMMDD(parsedD) : "",
+            "Fitness_Date": parsedF ? formatDateYYYYMMDD(parsedF) : "",
+            "Status": r["Status"] || r["STATUS"] || "Active",
+            "Remarks": r["Remarks"] || r["REMARKS"] || ""
+          });
+        });
+
+        e.target.value = '';
+        if (!imported.length) {
+          return alert(`⚠️ Koi ${importCategory}-Wheeler record nahi mila (${skippedCount} rows other category ki thi).`);
+        }
+
+        vehiclesData = imported.concat(vehiclesData);
+        saveLocal();
+        renderTable();
+        setSyncBadge('busy', 'Saving...');
+        pushUnsynced().then(() => { setSyncBadge('ok', 'Synced'); renderTable(); }).catch(() => setSyncBadge('err', 'Offline Saved'));
+
+        const skipMsg = skippedCount > 0 ? ` (${skippedCount} other category rows skip ki gayi)` : '';
+        alert(`✅ ${imported.length} vehicles import ho gayi!${skipMsg}`);
+        checkAndSendExpiryAlerts();
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    // ================= FAST DOCUMENT PREVIEW & INSTANT DOWNLOAD =================
+    function showDocument(id, field, title) {
+      const item = vehiclesData.find(v => String(v.id) === String(id));
+      if (!item || !item[field]) return;
+      const src = item[field];
+      const container = document.getElementById('previewContainer');
+      const openTabBtn = document.getElementById('openDriveNewTabBtn');
+      document.getElementById('img-modal-title').innerText = title;
+
+      const driveId = getDriveId(src);
+      if (driveId) {
+        const previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+        const viewUrl = `https://drive.google.com/file/d/${driveId}/view`;
+        const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+
+        currentPreviewData = { src: '', downloadUrl: directDownloadUrl, filename: `${title.replace(/\s+/g, '_')}` };
+        openTabBtn.href = viewUrl;
+        openTabBtn.style.display = 'inline-flex';
+        container.innerHTML = `<iframe src="${previewUrl}" style="width:100%; height:480px; border:none; border-radius:6px; background:#020617;" allow="autoplay"></iframe>`;
+      } else {
+        openTabBtn.style.display = 'none';
+        currentPreviewData = { src, downloadUrl: '', filename: `${title.replace(/\s+/g, '_')}` };
+        if (src.startsWith('data:application/pdf')) {
+          container.innerHTML = `<iframe src="${src}" style="width:100%; height:480px; border:none; border-radius:6px;"></iframe>`;
+        } else {
+          container.innerHTML = `<img src="${src}" style="max-width:100%; max-height:480px; border:none; border-radius:6px;">`;
+        }
+      }
+      document.getElementById('imgModal').classList.add('active');
+    }
+
+    function downloadPreviewDoc() {
+      const { src, downloadUrl, filename } = currentPreviewData;
+      if (downloadUrl) {
+        window.open(downloadUrl, '_blank');
+        return;
+      }
+      if (!src) return;
+      const ext = src.startsWith('data:application/pdf') ? 'pdf' : 'png';
+      const a = document.createElement('a');
+      a.href = src;
+      a.download = `${filename}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+  </script>
+</body>
+</html>
