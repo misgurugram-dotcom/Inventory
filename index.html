@@ -81,6 +81,8 @@
     .badge-maint { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
     .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
 
+    .doc-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #334155; cursor: pointer; background: #020617; vertical-align: middle; }
+    .doc-thumb:hover { border-color: #3b82f6; }
     .img-btn { background: #3b82f6; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; }
     .edit-btn { background: #f59e0b; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; margin-right: 4px; }
     .delete-btn { background: #ef4444; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; }
@@ -145,7 +147,8 @@
       <button type="button" class="action-btn admin-only" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Vehicle</button>
       <button type="button" class="action-btn excel admin-only" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
       <button type="button" class="action-btn secondary admin-only" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> Import Excel</button>
-      <button type="button" class="action-btn danger admin-only" onclick="deleteAllVehicles()"><i class="fa-solid fa-trash-can"></i> Delete All</button>
+      <button type="button" class="action-btn danger admin-only" onclick="deleteAllVehicles()"><i class="fa-solid fa-trash-can"></i> <span id="delete-all-label">Delete All</span></button>
+      <button type="button" class="action-btn secondary admin-only" onclick="removeDuplicates()" title="Same Vehicle No / Chassis No wali entries hatao"><i class="fa-solid fa-clone"></i> Remove Duplicates</button>
       <input type="file" id="importFile" style="display:none" accept=".xlsx, .xls, .csv" onchange="importFromExcel(event)">
       <button type="button" class="action-btn danger" onclick="switchRole()" title="Role badlo / Logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
     </div>
@@ -228,6 +231,8 @@
               <th>LOCATION</th>
               <th>RC DOC</th>
               <th>INSURANCE DOC</th>
+              <th>INSURANCE TYPE</th>
+              <th>INSURER</th>
               <th>INSURANCE START DATE</th>
               <th>FITNESS START DATE</th>
               <th>STATUS</th>
@@ -236,7 +241,7 @@
             </tr>
           </thead>
           <tbody id="tbl-body">
-            <tr><td colspan="12" style="text-align:center; padding:20px; color:var(--text-muted);">No Data Available.</td></tr>
+            <tr><td colspan="14" style="text-align:center; padding:20px; color:var(--text-muted);">No Data Available.</td></tr>
           </tbody>
         </table>
       </div>
@@ -313,6 +318,20 @@
             <label>Insurance Document (Image / PDF - Auto Scan Date)</label>
             <input type="file" id="f-ins-img" accept="image/*,application/pdf" onchange="handleInsuranceFileScan(this)">
             <span class="scan-status" id="ins-scan-msg"></span>
+          </div>
+          <div class="form-group">
+            <label>Insurance Type</label>
+            <input type="text" id="f-ins-type" list="ins-type-list" placeholder="e.g. Comprehensive, Third Party...">
+            <datalist id="ins-type-list">
+              <option value="Comprehensive"></option>
+              <option value="Third Party"></option>
+              <option value="Zero Depreciation"></option>
+              <option value="Own Damage"></option>
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label>Insurer</label>
+            <input type="text" id="f-insurer" placeholder="e.g. ICICI Lombard, New India Assurance...">
           </div>
           <div class="form-group">
             <label>Insurance Start Date (From Date)</label>
@@ -485,7 +504,14 @@
       document.getElementById('btn-cat-2w').classList.toggle('active', cat === '2W');
       document.getElementById('btn-cat-3w').classList.toggle('active', cat === '3W');
       populateFilterDropdowns();
+      updateDeleteAllLabel();
       renderTable();
+    }
+
+    function updateDeleteAllLabel() {
+      const el = document.getElementById('delete-all-label');
+      if (!el) return;
+      el.innerText = activeCategory === '2W' ? 'Delete 2-Wheeler' : activeCategory === '3W' ? 'Delete 3-Wheeler' : 'Delete All';
     }
 
     let vehiclesData = [];
@@ -500,6 +526,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       applyRole();
       populateFilterDropdowns();
+      updateDeleteAllLabel();
       renderTable();
       await loadFromCloud();
       checkAndSendExpiryAlerts();
@@ -759,10 +786,29 @@
     const stripLocal = ({ _dirty, _synced, ...r }) => r;
 
     function getDriveId(s) {
-      s = String(s || '');
+      s = String(s || '').trim();
       if (s.startsWith('drive:')) return s.slice(6);
-      const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (!/^https?:\/\/(drive|docs)\.google\.com\//i.test(s)) return '';
+      let m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);          // .../file/d/ID/view
+      if (m) return m[1];
+      m = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);             // open?id=ID , uc?id=ID , thumbnail?id=ID
       return m ? m[1] : '';
+    }
+
+    function isPdfSrc(s) { return /^data:application\/pdf/i.test(s) || /\.pdf(\?|#|$)/i.test(s); }
+
+    // Table cell: image thumbnail (click = full preview) ya button
+    function docCell(v, field, btnText, icon, titlePrefix) {
+      const s = v[field];
+      if (!hasDoc(s)) return `<span style="color:var(--text-muted);">-</span>`;
+      const title = `${titlePrefix} - ${v["Vehicle No"]}`;
+      const click = `showDocument('${v.id}', '${field}', '${String(title).replace(/'/g, "\\'")}')`;
+      const btn = `<button type="button" class="img-btn" onclick="${click}"><i class="fa-solid ${icon}"></i> ${btnText}</button>`;
+      if (isPdfSrc(s)) return btn;
+      const driveId = getDriveId(s);
+      const thumb = driveId ? `https://drive.google.com/thumbnail?id=${driveId}&sz=w200` : s;
+      const hiddenBtn = btn.replace('<button ', '<button style="display:none" ');
+      return `<img src="${thumb}" loading="lazy" referrerpolicy="no-referrer" alt="${btnText}" title="Click to view" class="doc-thumb" onclick="${click}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">${hiddenBtn}`;
     }
 
     async function apiPost(action, payload) {
@@ -791,11 +837,21 @@
         localStorage.removeItem(PENDING_DELALL_KEY);
       }
       const ids = getPendingDel();
-      if (ids.length) { await apiPost('delete', { ids }); setPendingDel([]); }
+      if (ids.length) {
+        for (let i = 0; i < ids.length; i += 100) {
+          await apiPost('delete', { ids: ids.slice(i, i + 100) });
+          setPendingDel(ids.slice(i + 100));
+        }
+        setPendingDel([]);
+      }
     }
 
     function applyCloudRefs(rec, ref) {
-      if (ref) { rec["RC_Image"] = ref.RC_Image; rec["Insurance_Image"] = ref.Insurance_Image; }
+      if (ref) {
+        const keep = s => typeof s === 'string' && /^(https?:|drive:)/i.test(s);
+        rec["RC_Image"] = ref.RC_Image || (keep(rec["RC_Image"]) ? rec["RC_Image"] : (ref.RC_Image || ''));
+        rec["Insurance_Image"] = ref.Insurance_Image || (keep(rec["Insurance_Image"]) ? rec["Insurance_Image"] : (ref.Insurance_Image || ''));
+      }
       rec._synced = true; delete rec._dirty;
     }
 
@@ -841,7 +897,13 @@
         await flushPending();
         await pushUnsynced();
         const j = await apiGet({ action: 'list' });
-        const cloud = (j.records || []).map(r => ({ ...r, _synced: true }));
+        const localById = new Map(vehiclesData.map(v => [String(v.id), v]));
+        const cloud = (j.records || []).map(r => {
+          const lc = localById.get(String(r.id));
+          const rec = { ...r, _synced: true };
+          if (lc) ['Insurance_Type', 'Insurer'].forEach(k => { if ((rec[k] === undefined || rec[k] === '') && lc[k]) rec[k] = lc[k]; });
+          return rec;
+        });
         const cloudIds = new Set(cloud.map(r => String(r.id)));
         const keepLocal = vehiclesData.filter(v => !cloudIds.has(String(v.id)) && !v._synced);
         vehiclesData = cloud.concat(keepLocal);
@@ -1014,7 +1076,7 @@
         if (fFit === 'VALID' && !fitInfo.valid) return false;
 
         if (q) {
-          const hay = `${v["Vehicle No"] || ""} ${v["Chassis No"] || ""} ${v["Vehicle Modal"] || ""} ${v["Location"] || ""} ${v["Remarks"] || ""} ${insInfo.text} ${fitInfo.text}`.toLowerCase();
+          const hay = `${v["Vehicle No"] || ""} ${v["Chassis No"] || ""} ${v["Vehicle Modal"] || ""} ${v["Location"] || ""} ${v["Remarks"] || ""} ${v["Insurance_Type"] || ""} ${v["Insurer"] || ""} ${insInfo.text} ${fitInfo.text}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -1025,18 +1087,13 @@
 
       const tbody = document.getElementById('tbl-body');
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; color:var(--text-muted);">${firstLoadDone ? 'No Data Available.' : '<i class="fa-solid fa-spinner fa-spin"></i> Data load ho raha hai...'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:20px; color:var(--text-muted);">${firstLoadDone ? 'No Data Available.' : '<i class="fa-solid fa-spinner fa-spin"></i> Data load ho raha hai...'}</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map((v, idx) => {
-        const rcCell = hasDoc(v["RC_Image"])
-          ? `<button type="button" class="img-btn" onclick="showDocument('${v.id}', 'RC_Image', 'RC Document - ${v["Vehicle No"]}')"><i class="fa-solid fa-file-lines"></i> View RC</button>`
-          : `<span style="color:var(--text-muted);">-</span>`;
-
-        const insCell = hasDoc(v["Insurance_Image"])
-          ? `<button type="button" class="img-btn" onclick="showDocument('${v.id}', 'Insurance_Image', 'Insurance - ${v["Vehicle No"]}')"><i class="fa-solid fa-file-shield"></i> View Ins</button>`
-          : `<span style="color:var(--text-muted);">-</span>`;
+        const rcCell = docCell(v, "RC_Image", "View RC", "fa-file-lines", "RC Document");
+        const insCell = docCell(v, "Insurance_Image", "View Ins", "fa-file-shield", "Insurance");
 
         const insStartDisplay = v["Insurance_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Insurance_Date"])) : '-';
         const fitStartDisplay = v["Fitness_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Fitness_Date"])) : '-';
@@ -1058,6 +1115,8 @@
             <td>${v["Location"] || '-'}</td>
             <td>${rcCell}</td>
             <td>${insCell}</td>
+            <td>${v["Insurance_Type"] || '-'}</td>
+            <td>${v["Insurer"] || '-'}</td>
             <td>${insStartDisplay}</td>
             <td>${fitStartDisplay}</td>
             <td>${getStatusBadge(v["Status"] || 'Active')}</td>
@@ -1084,6 +1143,8 @@
       document.getElementById('f-ins-date').value = item && item["Insurance_Date"] ? formatDateYYYYMMDD(parseAnyDate(item["Insurance_Date"])) : '';
       document.getElementById('f-fit-date').value = item && item["Fitness_Date"] ? formatDateYYYYMMDD(parseAnyDate(item["Fitness_Date"])) : '';
       document.getElementById('f-remarks').value = item ? (item["Remarks"] || '') : '';
+      document.getElementById('f-ins-type').value = item ? (item["Insurance_Type"] || '') : '';
+      document.getElementById('f-insurer').value = item ? (item["Insurer"] || '') : '';
       document.getElementById('f-rc-img').value = '';
       document.getElementById('f-ins-img').value = '';
       document.getElementById('ins-scan-msg').innerHTML = '';
@@ -1095,6 +1156,44 @@
       if (!isAdmin()) return;
       const item = vehiclesData.find(v => String(v.id) === String(id));
       if (item) openAddModal(item);
+    }
+
+    // ================= DUPLICATE PROTECTION =================
+    const normKey = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Same Vehicle No ya same Chassis No wali dusri entry dhundho
+    function findDuplicate(vehNo, chassis, ignoreId = null) {
+      const kv = normKey(vehNo), kc = normKey(chassis);
+      if (!kv && !kc) return null;
+      return vehiclesData.find(v => {
+        if (ignoreId !== null && String(v.id) === String(ignoreId)) return false;
+        if (kv && normKey(v["Vehicle No"]) === kv) return true;
+        if (kc && normKey(v["Chassis No"]) === kc) return true;
+        return false;
+      }) || null;
+    }
+
+    async function removeDuplicates() {
+      if (!isAdmin()) return;
+      const score = v => (hasDoc(v["RC_Image"]) ? 1 : 0) + (hasDoc(v["Insurance_Image"]) ? 1 : 0) + (v._synced ? 1 : 0) + (v["Insurer"] ? 1 : 0) + (v["Insurance_Date"] ? 1 : 0);
+      const ordered = vehiclesData.map((v, i) => ({ v, i })).sort((a, b) => score(b.v) - score(a.v) || a.i - b.i);
+      const seenV = new Set(), seenC = new Set(), dupIds = [];
+      ordered.forEach(({ v }) => {
+        const kv = normKey(v["Vehicle No"]), kc = normKey(v["Chassis No"]);
+        if ((kv && seenV.has(kv)) || (kc && seenC.has(kc))) { dupIds.push(String(v.id)); return; }
+        if (kv) seenV.add(kv);
+        if (kc) seenC.add(kc);
+      });
+      if (!dupIds.length) return alert('✅ Koi duplicate nahi mila.');
+      if (!confirm(`${dupIds.length} duplicate entries mili (same Vehicle No / Chassis No). Har vehicle ki sabse complete entry rakhkar baaki delete kar du? (Google Sheet se bhi)`)) return;
+      const idSet = new Set(dupIds);
+      vehiclesData = vehiclesData.filter(v => !idSet.has(String(v.id)));
+      saveLocal();
+      renderTable();
+      setPendingDel(getPendingDel().concat(dupIds));
+      try { setSyncBadge('busy', 'Saving...'); await flushPending(); setSyncBadge('ok', 'Synced'); }
+      catch (e) { setSyncBadge('err', 'Offline Saved'); }
+      alert(`✅ ${dupIds.length} duplicate entries hata di gayi.`);
     }
 
     async function saveVehicle(e) {
@@ -1115,6 +1214,15 @@
         const insDate = document.getElementById('f-ins-date').value;
         const fitDate = document.getElementById('f-fit-date').value;
         const remarks = document.getElementById('f-remarks').value.trim();
+        const insType = document.getElementById('f-ins-type').value.trim();
+        const insurer = document.getElementById('f-insurer').value.trim();
+
+        const dup = findDuplicate(vehNo, chassis, editId || null);
+        if (dup) {
+          const sameVeh = vehNo && normKey(dup["Vehicle No"]) === normKey(vehNo);
+          alert(`⚠️ Duplicate entry!\n${sameVeh ? 'Vehicle No "' + vehNo + '"' : 'Chassis No "' + chassis + '"'} pehle se maujood hai (${dup["Vehicle No"] || '-'} / ${dup["Chassis No"] || '-'}).\nExisting entry ko Edit karein.`);
+          return;
+        }
 
         const rcFile = document.getElementById('f-rc-img').files[0];
         const insFile = document.getElementById('f-ins-img').files[0];
@@ -1136,6 +1244,8 @@
             vehiclesData[idx]["Insurance_Date"] = insDate;
             vehiclesData[idx]["Fitness_Date"] = fitDate;
             vehiclesData[idx]["Remarks"] = remarks;
+            vehiclesData[idx]["Insurance_Type"] = insType;
+            vehiclesData[idx]["Insurer"] = insurer;
             if (rcBase64) vehiclesData[idx]["RC_Image"] = rcBase64;
             if (insBase64) vehiclesData[idx]["Insurance_Image"] = insBase64;
             vehiclesData[idx]._dirty = true;
@@ -1153,7 +1263,9 @@
             "Insurance_Date": insDate,
             "Fitness_Date": fitDate,
             "Status": status,
-            "Remarks": remarks
+            "Remarks": remarks,
+            "Insurance_Type": insType,
+            "Insurer": insurer
           };
           vehiclesData.unshift(newRow);
           savedRec = newRow;
@@ -1187,12 +1299,35 @@
 
     async function deleteAllVehicles() {
       if (!isAdmin()) return;
-      if (!confirm("⚠️ Saara Vehicle Inventory data delete ho jayega (Google Sheet se bhi). Confirm?")) return;
-      vehiclesData = [];
+      const cat = activeCategory;
+
+      // ---- ALL tab: sab kuch delete ----
+      if (cat === 'ALL') {
+        if (!confirm("⚠️ SAARI vehicles (2-Wheeler + 3-Wheeler) delete ho jayengi (Google Sheet se bhi). Confirm?")) return;
+        vehiclesData = [];
+        saveLocal();
+        renderTable();
+        try { localStorage.setItem(PENDING_DELALL_KEY, '1'); } catch (e) {}
+        setPendingDel([]);
+        try { setSyncBadge('busy', 'Saving...'); await flushPending(); setSyncBadge('ok', 'Synced'); }
+        catch (e) { setSyncBadge('err', 'Offline Saved'); }
+        return;
+      }
+
+      // ---- 2-Wheeler / 3-Wheeler tab: sirf usi category ki vehicles delete ----
+      const label = cat === '2W' ? '2-Wheeler' : '3-Wheeler';
+      const targets = vehiclesData.filter(v => getVehicleCategory(v["Vehicle Modal"]) === cat);
+      if (!targets.length) return alert(`${label} ka koi data nahi hai delete karne ke liye.`);
+      if (!confirm(`⚠️ Sirf ${targets.length} ${label} vehicles delete hongi (Google Sheet se bhi). Dusri category ka data safe rahega. Confirm?`)) return;
+
+      const idsToDelete = targets.map(v => String(v.id));
+      const idSet = new Set(idsToDelete);
+      vehiclesData = vehiclesData.filter(v => !idSet.has(String(v.id)));
       saveLocal();
       renderTable();
-      try { localStorage.setItem(PENDING_DELALL_KEY, '1'); } catch (e) {}
-      setPendingDel([]);
+
+      const pend = getPendingDel();
+      setPendingDel(pend.concat(idsToDelete));
       try { setSyncBadge('busy', 'Saving...'); await flushPending(); setSyncBadge('ok', 'Synced'); }
       catch (e) { setSyncBadge('err', 'Offline Saved'); }
     }
@@ -1232,6 +1367,8 @@
           "Chassis No": v["Chassis No"] || "",
           "Vehicle Modal": v["Vehicle Modal"] || "",
           "Location": v["Location"] || "",
+          "Insurance Type": v["Insurance_Type"] || "",
+          "Insurer": v["Insurer"] || "",
           "Insurance Start Date": v["Insurance_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Insurance_Date"])) : "",
           "Fitness Start Date": v["Fitness_Date"] ? formatDateDDMMYYYY(parseAnyDate(v["Fitness_Date"])) : "",
           "Status": v["Status"] || "",
@@ -1246,6 +1383,43 @@
       XLSX.writeFile(wb, `Whizz_EV_Vehicle_Inventory${suffix}.xlsx`);
     }
 
+    // ---- Sheet ke RC / Insurance image-link columns dhundhna ----
+    function detectDocColumns(ws) {
+      const out = { rc: [], ins: [] };
+      if (!ws || !ws['!ref']) return out;
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c })];
+        if (!cell) continue;
+        const h = String(cell.v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!h || h.includes('date') || h.includes('start') || h.includes('expiry')) continue;
+        const isDoc = /(doc|image|img|link|photo|pic|url|file|upload|scan)/.test(h);
+        if ((h === 'rc' || h.startsWith('rc')) && (isDoc || h === 'rc')) out.rc.push(c);
+        else if ((h.startsWith('insurance') || h.startsWith('ins')) && (isDoc || h === 'ins')) out.ins.push(c);
+      }
+      return out;
+    }
+
+    function extractUrl(cell) {
+      if (!cell) return '';
+      if (cell.l && cell.l.Target && /^https?:/i.test(cell.l.Target)) return cell.l.Target.trim();      // hyperlink text
+      if (cell.f) { const m = String(cell.f).match(/https?:\/\/[^"'\s)]+/i); if (m) return m[0]; }         // =IMAGE("url") / =HYPERLINK("url")
+      const v = String(cell.v == null ? '' : cell.v).trim();
+      const m2 = v.match(/https?:\/\/\S+/i);                                                                // plain link / text me link
+      return m2 ? m2[0] : '';
+    }
+
+    function getDocLink(ws, cols, rowIdx) {
+      if (!ws || !cols || !cols.length) return '';
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const r = range.s.r + 1 + rowIdx;
+      for (const c of cols) {
+        const url = extractUrl(ws[XLSX.utils.encode_cell({ r, c })]);
+        if (url) return url;
+      }
+      return '';
+    }
+
     function importFromExcel(e) {
       if (!isAdmin()) return;
       const file = e.target.files[0];
@@ -1255,16 +1429,22 @@
       reader.onload = async (evt) => {
         try { await ensureXLSX(); } catch (err) { return alert('Excel library load nahi hui.'); }
         const wb = XLSX.read(evt.target.result, { type: 'binary' });
-        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: "", blankrows: true });
+        const docCols = detectDocColumns(ws);
         if (!json.length) {
           e.target.value = '';
           return alert("Excel file khaali hai!");
         }
 
         let skippedCount = 0;
+        let dupCount = 0;
         const imported = [];
+        const seenV = new Set(vehiclesData.map(v => normKey(v["Vehicle No"])).filter(Boolean));
+        const seenC = new Set(vehiclesData.map(v => normKey(v["Chassis No"])).filter(Boolean));
 
-        json.forEach(r => {
+        json.forEach((r, rowIdx) => {
+          if (!Object.values(r).some(x => String(x).trim() !== "")) return; // blank row skip
           const rawModel = (r["Vehicle Modal"] || r["VEHICLE MODEL"] || r["Model"] || "").toString().trim();
           const detectedCat = rawModel ? getVehicleCategory(rawModel) : (importCategory === 'ALL' ? '3W' : importCategory);
 
@@ -1272,6 +1452,13 @@
             skippedCount++;
             return;
           }
+
+          const impVeh = (r["Vehicle No"] || r["Vehicle No."] || r["VEHICLE NO."] || r["VEHICLE NO"] || "").toString();
+          const impChs = (r["Chassis No"] || r["CHASSIS NO"] || "").toString();
+          const kv = normKey(impVeh), kc = normKey(impChs);
+          if ((kv && seenV.has(kv)) || (kc && seenC.has(kc))) { dupCount++; return; }
+          if (kv) seenV.add(kv);
+          if (kc) seenC.add(kc);
 
           let finalModel = matchKnownModel(rawModel, importCategory === 'ALL' ? null : importCategory);
           if (!finalModel) {
@@ -1291,18 +1478,20 @@
             "Chassis No": (r["Chassis No"] || r["CHASSIS NO"] || "").toString().toUpperCase(),
             "Vehicle Modal": finalModel,
             "Location": r["Location"] || r["LOCATION"] || "",
-            "RC_Image": "",
-            "Insurance_Image": "",
+            "RC_Image": getDocLink(ws, docCols.rc, rowIdx),
+            "Insurance_Image": getDocLink(ws, docCols.ins, rowIdx),
             "Insurance_Date": parsedD ? formatDateYYYYMMDD(parsedD) : "",
             "Fitness_Date": parsedF ? formatDateYYYYMMDD(parsedF) : "",
             "Status": r["Status"] || r["STATUS"] || "Active",
-            "Remarks": r["Remarks"] || r["REMARKS"] || ""
+            "Remarks": r["Remarks"] || r["REMARKS"] || "",
+            "Insurance_Type": (r["Insurance Type"] || r["INSURANCE TYPE"] || r["Insurance_Type"] || r["Insurance type"] || "").toString().trim(),
+            "Insurer": (r["Insurer"] || r["INSURER"] || r["Insurance Company"] || r["Insurer Name"] || "").toString().trim()
           });
         });
 
         e.target.value = '';
         if (!imported.length) {
-          return alert(`⚠️ Koi ${importCategory}-Wheeler record nahi mila (${skippedCount} rows other category ki thi).`);
+          return alert(`⚠️ Koi nayi ${importCategory === 'ALL' ? '' : importCategory + '-Wheeler '}record import nahi hui. ${dupCount} duplicate aur ${skippedCount} other-category rows skip ki gayi.`);
         }
 
         vehiclesData = imported.concat(vehiclesData);
@@ -1311,7 +1500,7 @@
         setSyncBadge('busy', 'Saving...');
         pushUnsynced().then(() => { setSyncBadge('ok', 'Synced'); renderTable(); }).catch(() => setSyncBadge('err', 'Offline Saved'));
 
-        const skipMsg = skippedCount > 0 ? ` (${skippedCount} other category rows skip ki gayi)` : '';
+        const skipMsg = (skippedCount > 0 ? `\n${skippedCount} other category rows skip ki gayi.` : '') + (dupCount > 0 ? `\n${dupCount} duplicate rows skip ki gayi (Vehicle No / Chassis No pehle se hai).` : '');
         alert(`✅ ${imported.length} vehicles import ho gayi!${skipMsg}`);
         checkAndSendExpiryAlerts();
       };
@@ -1337,6 +1526,16 @@
         openTabBtn.href = viewUrl;
         openTabBtn.style.display = 'inline-flex';
         container.innerHTML = `<iframe src="${previewUrl}" style="width:100%; height:480px; border:none; border-radius:6px; background:#020617;" allow="autoplay"></iframe>`;
+      } else if (/^https?:/i.test(src)) {
+        // Normal image / PDF link (Drive ke bahar)
+        currentPreviewData = { src: '', downloadUrl: src, filename: `${title.replace(/\s+/g, '_')}` };
+        openTabBtn.href = src;
+        openTabBtn.style.display = 'inline-flex';
+        if (isPdfSrc(src)) {
+          container.innerHTML = `<iframe src="${src}" style="width:100%; height:480px; border:none; border-radius:6px; background:#fff;"></iframe>`;
+        } else {
+          container.innerHTML = `<img src="${src}" referrerpolicy="no-referrer" style="max-width:100%; max-height:480px; border:none; border-radius:6px;" onerror="this.outerHTML='<div style=&quot;padding:24px;text-align:center;color:#cbd5e1;&quot;>Image preview nahi khul pa rahi. Upar <b>Open</b> button se link kholein.</div>'">`;
+        }
       } else {
         openTabBtn.style.display = 'none';
         currentPreviewData = { src, downloadUrl: '', filename: `${title.replace(/\s+/g, '_')}` };
