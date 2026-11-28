@@ -10,12 +10,13 @@
 
   <style>
     :root {
-      --bg-primary: #0f172a;
-      --bg-surface: #1e293b;
-      --bg-sidebar: #020617;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
+      --bg-primary: #ffffff;
+      --bg-surface: #ffffff;
+      --bg-sidebar: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border-color: #cbd5e1;
+      color-scheme: light;
       --primary-color: #10b981;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -29,7 +30,7 @@
     .brand-sub { font-size: 0.66rem; color: var(--text-muted); }
 
     .header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .user-tag { font-size: 0.72rem; padding: 3px 8px; border-radius: 5px; background: #334155; color: #10b981; font-weight: 700; }
+    .user-tag { font-size: 0.72rem; padding: 3px 8px; border-radius: 5px; background: #e2e8f0; color: #047857; font-weight: 700; }
     .action-btn { background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.74rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; text-decoration: none; }
     .action-btn:hover { background: #059669; }
     .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -55,8 +56,8 @@
     .kpi-card { background: var(--bg-surface); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .kpi-title { font-size: 0.64rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
     .kpi-value { font-size: 1.05rem; font-weight: 700; color: var(--text-main); }
-    .kpi-value.green { color: #10b981; }
-    .kpi-value.blue { color: #3b82f6; }
+    .kpi-value.green { color: #059669; }
+    .kpi-value.blue { color: #2563eb; }
 
     /* Filter Toolbar */
     .filter-card { background: var(--bg-surface); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
@@ -64,24 +65,24 @@
     .filter-group { display: flex; align-items: center; gap: 5px; font-size: 0.74rem; font-weight: 600; color: var(--text-muted); }
     .filter-input, .filter-select { padding: 4px 8px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main); font-size: 0.74rem; outline: none; }
     .filter-input:focus, .filter-select:focus { border-color: var(--primary-color); }
-    .record-badge { background: #334155; color: #cbd5e1; font-size: 0.7rem; font-weight: 700; padding: 4px 9px; border-radius: 5px; }
+    .record-badge { background: #e2e8f0; color: #334155; font-size: 0.7rem; font-weight: 700; padding: 4px 9px; border-radius: 5px; }
 
     /* Data Table */
     .table-card { background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; }
     .table-wrapper { overflow-x: auto; max-height: calc(100vh - 170px); }
     table.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.76rem; }
-    table.data-table th { background: #020617; padding: 8px 10px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+    table.data-table th { background: var(--bg-sidebar); padding: 8px 10px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
     table.data-table td { padding: 7px 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-    table.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+    table.data-table tr:hover td { background: rgba(15,23,42,0.04); }
 
     /* Status Badges & Action Buttons */
     .badge { padding: 2px 7px; border-radius: 4px; font-size: 0.67rem; font-weight: 700; display: inline-block; }
-    .badge-active { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
-    .badge-rfd { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid #3b82f6; }
-    .badge-maint { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
-    .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+    .badge-active { background: rgba(16, 185, 129, 0.15); color: #047857; border: 1px solid #10b981; }
+    .badge-rfd { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; border: 1px solid #3b82f6; }
+    .badge-maint { background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid #f59e0b; }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: #b91c1c; border: 1px solid #ef4444; }
 
-    .doc-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #334155; cursor: pointer; background: #020617; vertical-align: middle; }
+    .doc-thumb { width: 54px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; cursor: pointer; background: #f1f5f9; vertical-align: middle; }
     .doc-thumb:hover { border-color: #3b82f6; }
     .img-btn { background: #3b82f6; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; }
     .edit-btn { background: #f59e0b; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.67rem; font-weight: 600; cursor: pointer; margin-right: 4px; }
@@ -89,9 +90,9 @@
 
     /* Role based visibility */
     body:not(.role-admin) .admin-only { display: none !important; }
-    .login-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .login-overlay { position: fixed; inset: 0; background: #ffffff; z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
     .login-overlay.active { display: flex; }
-    .login-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .login-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(15,23,42,0.18); }
     .login-card h2 { font-size: 1.1rem; margin-bottom: 4px; }
     .login-card p { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px; }
     .login-card input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-main); font-size: 0.9rem; outline: none; margin-bottom: 10px; }
@@ -104,7 +105,7 @@
     /* Modals */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.active { display: flex; }
-    .modal-card { background: var(--bg-surface); width: 95%; max-width: 680px; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); max-height: 92vh; overflow-y: auto; border: 1px solid var(--border-color); }
+    .modal-card { background: var(--bg-surface); width: 95%; max-width: 680px; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(15,23,42,0.18); max-height: 92vh; overflow-y: auto; border: 1px solid var(--border-color); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; }
     .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
     @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
@@ -253,7 +254,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="modal-title"><i class="fa-solid fa-motorcycle"></i> Add Vehicle</h3>
-        <button type="button" style="border:none; background:none; cursor:pointer; color:#fff; font-size:1.1rem;" onclick="closeModal('vehicleModal')"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" style="border:none; background:none; cursor:pointer; color:var(--text-main); font-size:1.1rem;" onclick="closeModal('vehicleModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <form id="vehicleForm" onsubmit="saveVehicle(event)">
         <input type="hidden" id="edit-id" value="">
@@ -339,7 +340,7 @@
           </div>
           <div class="form-group">
             <label>Auto 1-Year Insurance Expiry Preview</label>
-            <input type="text" id="f-expiry-preview" readonly placeholder="Select Insurance Date..." style="background:#020617; font-weight:700;">
+            <input type="text" id="f-expiry-preview" readonly placeholder="Select Insurance Date..." style="background:#f1f5f9; font-weight:700;">
           </div>
           <div class="form-group">
             <label>Fitness Start Date (From Date)</label>
@@ -347,7 +348,7 @@
           </div>
           <div class="form-group">
             <label>Auto 1-Year Fitness Expiry Preview</label>
-            <input type="text" id="f-fit-expiry-preview" readonly placeholder="Select Fitness Date..." style="background:#020617; font-weight:700;">
+            <input type="text" id="f-fit-expiry-preview" readonly placeholder="Select Fitness Date..." style="background:#f1f5f9; font-weight:700;">
           </div>
           <div class="form-group" style="grid-column: 1 / -1;">
             <label>Additional Remarks (Optional)</label>
@@ -367,7 +368,7 @@
     <div class="modal-card" style="text-align: center; max-width: 800px;">
       <div class="modal-header">
         <h3 id="img-modal-title">Document Preview</h3>
-        <button type="button" style="border:none; background:none; cursor:pointer; color:#fff; font-size:1.1rem;" onclick="closeModal('imgModal')"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" style="border:none; background:none; cursor:pointer; color:var(--text-main); font-size:1.1rem;" onclick="closeModal('imgModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="previewContainer" style="width:100%; display:flex; justify-content:center; align-items:center;"></div>
       <div style="margin-top: 14px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
@@ -619,7 +620,7 @@
     function setPreview(inputId, info) {
       const el = document.getElementById(inputId);
       el.value = info.text;
-      el.style.color = info.text ? ((info.expired || info.dueSoon) ? '#ef4444' : '#10b981') : '#94a3b8';
+      el.style.color = info.text ? ((info.expired || info.dueSoon) ? '#ef4444' : '#059669') : '#64748b';
     }
 
     function updateFormExpiryPreview() {
@@ -775,7 +776,7 @@
       if (!b) return;
       const colors = { ok: '#10b981', busy: '#38bdf8', err: '#ef4444' };
       b.style.display = 'inline-block';
-      b.style.color = colors[state] || '#94a3b8';
+      b.style.color = colors[state] || '#64748b';
       b.innerText = (state === 'ok' ? '☁ ' : state === 'busy' ? '⟳ ' : '⚠ ') + text;
     }
 
@@ -1102,7 +1103,7 @@
         let remarksHTML = badges.length ? `<div class="rem-line">${badges.join('')}</div>` : '';
 
         if (v["Remarks"]) {
-          remarksHTML += (remarksHTML ? '<div style="color:#cbd5e1; margin-top:4px;">' + v["Remarks"] + '</div>' : v["Remarks"]);
+          remarksHTML += (remarksHTML ? '<div style="color:#475569; margin-top:4px;">' + v["Remarks"] + '</div>' : v["Remarks"]);
         }
         if (!remarksHTML) remarksHTML = '-';
 
@@ -1525,7 +1526,7 @@
         currentPreviewData = { src: '', downloadUrl: directDownloadUrl, filename: `${title.replace(/\s+/g, '_')}` };
         openTabBtn.href = viewUrl;
         openTabBtn.style.display = 'inline-flex';
-        container.innerHTML = `<iframe src="${previewUrl}" style="width:100%; height:480px; border:none; border-radius:6px; background:#020617;" allow="autoplay"></iframe>`;
+        container.innerHTML = `<iframe src="${previewUrl}" style="width:100%; height:480px; border:none; border-radius:6px; background:#f1f5f9;" allow="autoplay"></iframe>`;
       } else if (/^https?:/i.test(src)) {
         // Normal image / PDF link (Drive ke bahar)
         currentPreviewData = { src: '', downloadUrl: src, filename: `${title.replace(/\s+/g, '_')}` };
@@ -1534,7 +1535,7 @@
         if (isPdfSrc(src)) {
           container.innerHTML = `<iframe src="${src}" style="width:100%; height:480px; border:none; border-radius:6px; background:#fff;"></iframe>`;
         } else {
-          container.innerHTML = `<img src="${src}" referrerpolicy="no-referrer" style="max-width:100%; max-height:480px; border:none; border-radius:6px;" onerror="this.outerHTML='<div style=&quot;padding:24px;text-align:center;color:#cbd5e1;&quot;>Image preview nahi khul pa rahi. Upar <b>Open</b> button se link kholein.</div>'">`;
+          container.innerHTML = `<img src="${src}" referrerpolicy="no-referrer" style="max-width:100%; max-height:480px; border:none; border-radius:6px;" onerror="this.outerHTML='<div style=&quot;padding:24px;text-align:center;color:#475569;&quot;>Image preview nahi khul pa rahi. Upar <b>Open</b> button se link kholein.</div>'">`;
         }
       } else {
         openTabBtn.style.display = 'none';
